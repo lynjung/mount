@@ -1,8 +1,9 @@
 const TABS = [
-  { key: 'home',     label: 'Home',     icon: HomeIcon },
-  { key: 'calendar', label: 'Calendar', icon: CalendarIcon },
-  { key: 'trends',   label: 'Trends',   icon: TrendsIcon },
-  { key: 'profile',  label: 'Profile',  icon: ProfileIcon },
+  { key: 'home',         label: 'Home',         icon: HomeIcon },
+  { key: 'transactions', label: 'Transactions',  icon: TransactionsIcon },
+  { key: 'calendar',     label: 'Calendar',      icon: CalendarIcon },
+  { key: 'trends',       label: 'Trends',        icon: TrendsIcon },
+  { key: 'goals',        label: 'Goals',         icon: GoalsIcon },
 ]
 
 export function BottomNav({ active, onChange }) {
@@ -57,6 +58,16 @@ function CalendarIcon({ active }) {
   )
 }
 
+function TransactionsIcon({ active }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+      <rect x="9" y="3" width="6" height="4" rx="1" />
+      <path d="M9 12h6M9 16h4" />
+    </svg>
+  )
+}
+
 function TrendsIcon({ active }) {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -66,11 +77,12 @@ function TrendsIcon({ active }) {
   )
 }
 
-function ProfileIcon({ active }) {
+function GoalsIcon({ active }) {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" />
     </svg>
   )
 }

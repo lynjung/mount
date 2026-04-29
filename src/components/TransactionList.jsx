@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { TransactionRow } from './TransactionRow'
 import { CATEGORIES, CATEGORY_KEYS } from '../utils/categories'
 
-export function TransactionList({ transactions, accounts }) {
+export function TransactionList({ transactions, accounts, onAdd }) {
   const [search, setSearch] = useState('')
   const [filterAccount, setFilterAccount] = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
@@ -27,19 +27,27 @@ export function TransactionList({ transactions, accounts }) {
 
   return (
     <div>
-      {/* Search */}
-      <div style={{ padding: '12px 16px 8px' }}>
+      {/* Search + Add */}
+      <div style={{ padding: '12px 16px 8px', display: 'flex', gap: 8 }}>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search transactions…"
           style={{
-            width: '100%', padding: '9px 12px', fontSize: 13,
+            flex: 1, padding: '9px 12px', fontSize: 13,
             border: '1px solid #D8F3DC', borderRadius: 10,
             background: '#F8FAF9', color: '#0E1F1A', outline: 'none',
             fontFamily: 'inherit',
           }}
         />
+        {onAdd && (
+          <button onClick={onAdd} style={{
+            padding: '9px 16px', fontSize: 13, fontWeight: 600,
+            background: '#1A3D30', color: '#E8F5F0',
+            border: 'none', borderRadius: 10, cursor: 'pointer',
+            fontFamily: 'inherit', flexShrink: 0,
+          }}>+ Add</button>
+        )}
       </div>
 
       {/* Filters */}

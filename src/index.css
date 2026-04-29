@@ -19,3 +19,29 @@ body {
 }
 
 button { font-family: inherit; }
+
+.fab {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #1A3D30;
+  color: #E8F5F0;
+  border: none;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(26,61,48,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+}
+
+@media (min-width: 768px) {
+  .fab {
+    display: none;
+  }
+}

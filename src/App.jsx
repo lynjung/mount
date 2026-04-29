@@ -13,7 +13,7 @@ import { BudgetPanel } from './components/BudgetPanel'
 import { GoalsPanel } from './components/GoalsPanel'
 import { EmptyState } from './components/EmptyState'
 
-const DESKTOP_TABS = ['Transactions', 'Calendar', 'Trends', 'Budget', 'Goals', 'Account Colors']
+const DESKTOP_TABS = ['Home', 'Transactions', 'Calendar', 'Trends', 'Goals']
 
 export default function App() {
   const rate = useExchangeRate()
@@ -23,7 +23,7 @@ export default function App() {
   const [transactions, setTransactions] = useLocalStorage('mount_transactions', [])
 
   const [mobileTab, setMobileTab] = useState('home')
-  const [desktopTab, setDesktopTab] = useState('Transactions')
+  const [desktopTab, setDesktopTab] = useState('Home')
   const [showAddTx, setShowAddTx] = useState(false)
   const [showAddAccount, setShowAddAccount] = useState(false)
   const [skippedEmpty, setSkippedEmpty] = useState(false)
@@ -88,13 +88,15 @@ export default function App() {
                 cursor: 'pointer', fontFamily: 'inherit',
               }}>+ Add Account</button>
             </div>
-            <div style={{ paddingTop: 12 }}>
-              <TransactionList transactions={transactions} accounts={accounts} />
-            </div>
           </>
         )}
         {mobileTab === 'calendar' && (
           <CalendarView transactions={transactions} accounts={accounts} rate={rate} />
+        )}
+        {mobileTab === 'transactions' && (
+          <div style={{ paddingTop: 8 }}>
+            <TransactionList transactions={transactions} accounts={accounts} />
+          </div>
         )}
         {mobileTab === 'trends' && (
           <div style={{ paddingBottom: 24 }}>
@@ -103,35 +105,31 @@ export default function App() {
             <BudgetPanel transactions={transactions} rate={rate} />
           </div>
         )}
-        {mobileTab === 'profile' && (
+        {mobileTab === 'goals' && (
           <div style={{ paddingBottom: 24 }}>
             <GoalsPanel goals={goals} accounts={accounts} onAdd={addGoal} onUpdate={updateGoal} />
           </div>
         )}
-        <button
-          onClick={() => setShowAddTx(true)}
-          style={{
-            position: 'fixed', bottom: 80, right: 20,
-            width: 52, height: 52, borderRadius: '50%',
-            background: '#1A3D30', color: '#E8F5F0', border: 'none',
-            fontSize: 26, cursor: 'pointer', boxShadow: '0 4px 16px rgba(26,61,48,0.35)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 99,
-          }}
-        >+</button>
         <BottomNav active={mobileTab} onChange={setMobileTab} />
       </div>
 
       {/* ── Desktop: tab content ── */}
       <div className="desktop-only" style={{ padding: 24 }}>
-        {desktopTab === 'Transactions' && (
+        {desktopTab === 'Home' && (
           <>
             <Hero accounts={accounts} transactions={transactions} rate={rate} />
             <AccountsGrid accounts={accounts} rate={rate} />
-            <div style={{ marginTop: 24 }}>
-              <TransactionList transactions={transactions} accounts={accounts} />
+            <div style={{ padding: '10px 16px 0', textAlign: 'right' }}>
+              <button onClick={() => setShowAddAccount(true)} style={{
+                fontSize: 12, fontWeight: 500, color: '#1A3D30', background: 'none',
+                border: '1px solid #D8F3DC', borderRadius: 8, padding: '6px 12px',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}>+ Add Account</button>
             </div>
           </>
+        )}
+        {desktopTab === 'Transactions' && (
+          <TransactionList transactions={transactions} accounts={accounts} onAdd={() => setShowAddTx(true)} />
         )}
         {desktopTab === 'Calendar' && (
           <CalendarView transactions={transactions} accounts={accounts} rate={rate} />
@@ -143,16 +141,12 @@ export default function App() {
             <BudgetPanel transactions={transactions} rate={rate} />
           </>
         )}
-        {desktopTab === 'Budget' && (
-          <BudgetPanel transactions={transactions} rate={rate} />
-        )}
         {desktopTab === 'Goals' && (
           <GoalsPanel goals={goals} accounts={accounts} onAdd={addGoal} onUpdate={updateGoal} />
         )}
-        {desktopTab !== 'Transactions' && desktopTab !== 'Calendar' && desktopTab !== 'Trends' && desktopTab !== 'Budget' && desktopTab !== 'Goals' && (
-          <div style={{ color: '#4A6B5C' }}>{desktopTab} — coming soon</div>
-        )}
       </div>
+      <button onClick={() => setShowAddTx(true)} className="fab">+</button>
+
       {showAddAccount && (
         <AddAccountModal
           onSave={addAccount}
