@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { CATEGORY_KEYS, CATEGORIES } from '../utils/categories'
 
-const today = () => new Date().toISOString().slice(0, 10)
-
-const EMPTY = {
-  name: '', amount: '', type: 'expense', currency: 'USD',
-  accountId: '', category: 'food', date: today(), recurring: false, note: '',
+const today = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export function AddTransactionModal({ accounts, onSave, onClose }) {
-  const [form, setForm] = useState({ ...EMPTY, accountId: accounts[0]?.id || '' })
+  const [form, setForm] = useState({
+    name: '', amount: '', type: 'expense', currency: 'USD',
+    accountId: accounts[0]?.id || '', category: 'food',
+    date: today(), recurring: false, note: '',
+  })
   const [error, setError] = useState('')
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
