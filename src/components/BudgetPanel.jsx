@@ -6,7 +6,7 @@ import { CATEGORIES } from '../utils/categories'
 const BUDGET_CATS = ['food', 'transport', 'shopping', 'utilities', 'entertainment']
 
 export function BudgetPanel({ transactions, rate }) {
-  const { budget, loading, generate } = useAIBudget()
+  const { budget, loading, error, generate } = useAIBudget()
 
   const now = new Date()
   const yyyyMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -65,6 +65,12 @@ export function BudgetPanel({ transactions, rate }) {
         {loading && (
           <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: '#7A9E8E' }}>
             Analyzing your transactions…
+          </div>
+        )}
+
+        {error && !loading && (
+          <div style={{ padding: '16px 20px', fontSize: 13, color: '#9B2226', background: '#FFF5F5', borderTop: '1px solid #FFE5E7' }}>
+            ⚠️ {error}
           </div>
         )}
 

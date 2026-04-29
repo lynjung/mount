@@ -13,7 +13,7 @@ import { BudgetPanel } from './components/BudgetPanel'
 import { GoalsPanel } from './components/GoalsPanel'
 import { EmptyState } from './components/EmptyState'
 
-const DESKTOP_TABS = ['Home', 'Transactions', 'Calendar', 'Trends', 'Goals']
+const DESKTOP_TABS = ['Home', 'Transactions', 'Calendar', 'Trends', 'Budget']
 
 export default function App() {
   const rate = useExchangeRate()
@@ -101,12 +101,12 @@ export default function App() {
         {mobileTab === 'trends' && (
           <div style={{ paddingBottom: 24 }}>
             <FXGraph />
-            <div style={{ height: 16 }} />
-            <BudgetPanel transactions={transactions} rate={rate} />
           </div>
         )}
-        {mobileTab === 'goals' && (
+        {mobileTab === 'budget' && (
           <div style={{ paddingBottom: 24 }}>
+            <BudgetPanel transactions={transactions} rate={rate} />
+            <div style={{ height: 16 }} />
             <GoalsPanel goals={goals} accounts={accounts} onAdd={addGoal} onUpdate={updateGoal} />
           </div>
         )}
@@ -135,14 +135,14 @@ export default function App() {
           <CalendarView transactions={transactions} accounts={accounts} rate={rate} />
         )}
         {desktopTab === 'Trends' && (
-          <>
-            <FXGraph />
-            <div style={{ height: 16 }} />
-            <BudgetPanel transactions={transactions} rate={rate} />
-          </>
+          <FXGraph />
         )}
-        {desktopTab === 'Goals' && (
-          <GoalsPanel goals={goals} accounts={accounts} onAdd={addGoal} onUpdate={updateGoal} />
+        {desktopTab === 'Budget' && (
+          <>
+            <BudgetPanel transactions={transactions} rate={rate} />
+            <div style={{ height: 16 }} />
+            <GoalsPanel goals={goals} accounts={accounts} onAdd={addGoal} onUpdate={updateGoal} />
+          </>
         )}
       </div>
       <button onClick={() => setShowAddTx(true)} className="fab">+</button>

@@ -3,7 +3,7 @@ const TABS = [
   { key: 'transactions', label: 'Transactions',  icon: TransactionsIcon },
   { key: 'calendar',     label: 'Calendar',      icon: CalendarIcon },
   { key: 'trends',       label: 'Trends',        icon: TrendsIcon },
-  { key: 'goals',        label: 'Goals',         icon: GoalsIcon },
+  { key: 'budget',        label: 'Budget',        icon: BudgetIcon },
 ]
 
 export function BottomNav({ active, onChange }) {
@@ -77,7 +77,7 @@ function TrendsIcon({ active }) {
   )
 }
 
-function GoalsIcon({ active }) {
+function BudgetIcon({ active }) {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9" />
