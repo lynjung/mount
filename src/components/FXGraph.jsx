@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 const RANGES = ['1D', '1W', '1M']
 
@@ -14,30 +14,50 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function niceYTicks(min, max, count = 4) {
+  const range = max - min || 1
+  // Pick a step that's a "nice" number (1, 2, 5, 10, 20, 50, 100…)
+  const rawStep = range / count
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)))
+  const normalized = rawStep / magnitude
+  const nice = normalized < 1.5 ? 1 : normalized < 3.5 ? 2 : normalized < 7.5 ? 5 : 10
+  const step = nice * magnitude
+
+  const yMin = Math.floor(min / step) * step
+  const yMax = Math.ceil(max / step) * step
+  const ticks = []
+  for (let v = yMin; v <= yMax + step * 0.01; v += step) ticks.push(Math.round(v))
+  return ticks
+}
+
 export function FXGraph() {
   const [range, setRange] = useState('1M')
   const [points, setPoints] = useState([])
   const [loading, setLoading] = useState(false)
+  const [tooltip, setTooltip] = useState(null)
   const canvasRef = useRef(null)
+  const overlayRef = useRef(null)
+  const layoutRef = useRef(null)
 
   useEffect(() => {
     setLoading(true)
     const start = getRangeStart(range)
     const end = todayStr()
-    fetch(`https://api.frankfurter.app/${start}..${end}?from=USD&to=KRW`)
+    fetch(`https://api.frankfurter.dev/v1/${start}..${end}?from=USD&to=KRW`)
       .then(r => r.json())
       .then(data => {
         const pts = Object.entries(data.rates || {})
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([date, val]) => ({ date, rate: val.KRW }))
+          .filter(p => p.rate != null && isFinite(p.rate))
         setPoints(pts)
       })
       .catch(e => console.error('FX history error:', e))
       .finally(() => setLoading(false))
   }, [range])
 
-  useEffect(() => {
-    if (!points.length) return
+  const drawChart = useCallback((pts) => {
+    if (!pts.length) return
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -48,41 +68,161 @@ export function FXGraph() {
     canvas.height = H * dpr
     ctx.scale(dpr, dpr)
 
-    const rates = points.map(p => p.rate)
+    const rates = pts.map(p => p.rate)
     const min = Math.min(...rates)
     const max = Math.max(...rates)
-    const pad = { top: 12, bottom: 12, left: 4, right: 4 }
+    const yTicks = niceYTicks(min, max, 4)
+    const yMin = yTicks[0]
+    const yMax = yTicks[yTicks.length - 1]
+
+    const pad = { top: 12, bottom: 28, left: 62, right: 12 }
     const chartW = W - pad.left - pad.right
     const chartH = H - pad.top - pad.bottom
 
-    const x = (i) => pad.left + (i / (points.length - 1)) * chartW
-    const y = (r) => pad.top + (1 - (r - min) / (max - min || 1)) * chartH
+    const xPos = (i) => pad.left + (i / (pts.length - 1 || 1)) * chartW
+    const yPos = (r) => pad.top + (1 - (r - yMin) / (yMax - yMin || 1)) * chartH
 
     const isUp = rates[rates.length - 1] >= rates[0]
     const lineColor = isUp ? '#52B788' : '#E63946'
+
+    // store layout for hit-testing and overlay drawing
+    layoutRef.current = { pad, chartW, chartH, xPos, yPos, pts, lineColor }
     const fillColor = isUp ? 'rgba(82,183,136,0.12)' : 'rgba(230,57,70,0.10)'
+    const gridColor = '#E8F5F0'
+    const labelColor = '#7A9E8E'
 
     ctx.clearRect(0, 0, W, H)
 
+    // Grid lines + Y labels
+    ctx.font = `${11 * dpr / dpr}px -apple-system, sans-serif`
+    ctx.textAlign = 'right'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = labelColor
+    yTicks.forEach(tick => {
+      const yp = yPos(tick)
+      ctx.strokeStyle = gridColor
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(pad.left, yp)
+      ctx.lineTo(W - pad.right, yp)
+      ctx.stroke()
+      ctx.fillText(`₩${Math.round(tick).toLocaleString('ko-KR')}`, pad.left - 6, yp)
+    })
+
+    // X-axis date labels
+    const xLabelCount = Math.min(pts.length, range === '1D' ? 3 : range === '1W' ? 4 : 5)
+    const step = Math.max(1, Math.floor((pts.length - 1) / (xLabelCount - 1)))
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'top'
+    ctx.fillStyle = labelColor
+    const labelY = H - pad.bottom + 6
+    const labelFmt = (date) => new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    let lastDrawnX = -Infinity
+    const minGap = 48
+    for (let i = 0; i < pts.length; i += step) {
+      const xp = xPos(i)
+      if (xp - lastDrawnX >= minGap) {
+        ctx.fillText(labelFmt(pts[i].date), xp, labelY)
+        lastDrawnX = xp
+      }
+    }
+    // always label last point if it won't collide
+    const lastX = xPos(pts.length - 1)
+    if (lastX - lastDrawnX >= minGap) {
+      ctx.fillText(labelFmt(pts[pts.length - 1].date), lastX, labelY)
+    }
+
+    const chartBottom = pad.top + chartH
+
     // Fill area
     ctx.beginPath()
-    ctx.moveTo(x(0), y(rates[0]))
-    points.forEach((p, i) => ctx.lineTo(x(i), y(p.rate)))
-    ctx.lineTo(x(points.length - 1), H - pad.bottom)
-    ctx.lineTo(x(0), H - pad.bottom)
+    ctx.moveTo(xPos(0), yPos(rates[0]))
+    pts.forEach((p, i) => ctx.lineTo(xPos(i), yPos(p.rate)))
+    ctx.lineTo(xPos(pts.length - 1), chartBottom)
+    ctx.lineTo(xPos(0), chartBottom)
     ctx.closePath()
     ctx.fillStyle = fillColor
     ctx.fill()
 
     // Line
     ctx.beginPath()
-    ctx.moveTo(x(0), y(rates[0]))
-    points.forEach((p, i) => ctx.lineTo(x(i), y(p.rate)))
+    ctx.moveTo(xPos(0), yPos(rates[0]))
+    pts.forEach((p, i) => ctx.lineTo(xPos(i), yPos(p.rate)))
     ctx.strokeStyle = lineColor
     ctx.lineWidth = 2
     ctx.lineJoin = 'round'
     ctx.stroke()
-  }, [points])
+  }, [range])
+
+  useEffect(() => {
+    drawChart(points)
+  }, [points, drawChart])
+
+  const drawOverlay = useCallback((idx) => {
+    const overlay = overlayRef.current
+    if (!overlay) return
+    const layout = layoutRef.current
+    const dpr = window.devicePixelRatio || 1
+    const W = overlay.offsetWidth
+    const H = overlay.offsetHeight
+    overlay.width = W * dpr
+    overlay.height = H * dpr
+    const ctx = overlay.getContext('2d')
+    ctx.scale(dpr, dpr)
+    ctx.clearRect(0, 0, W, H)
+    if (idx == null || !layout) return
+
+    const { pad, chartH, xPos, yPos, pts } = layout
+    const pt = pts[idx]
+    const xp = xPos(idx)
+    const yp = yPos(pt.rate)
+    const chartBottom = pad.top + chartH
+
+    // Vertical line
+    ctx.beginPath()
+    ctx.moveTo(xp, pad.top)
+    ctx.lineTo(xp, chartBottom)
+    ctx.strokeStyle = 'rgba(14,31,26,0.15)'
+    ctx.lineWidth = 1
+    ctx.setLineDash([4, 3])
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    // Dot
+    ctx.beginPath()
+    ctx.arc(xp, yp, 4, 0, Math.PI * 2)
+    ctx.fillStyle = '#fff'
+    ctx.fill()
+    ctx.strokeStyle = layout.lineColor
+    ctx.lineWidth = 2
+    ctx.stroke()
+  }, [])
+
+  const handleMouseMove = useCallback((e) => {
+    const layout = layoutRef.current
+    if (!layout) return
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const { pad, chartW, pts } = layout
+    if (mouseX < pad.left || mouseX > pad.left + chartW) {
+      setTooltip(null)
+      drawOverlay(null)
+      return
+    }
+    const frac = (mouseX - pad.left) / chartW
+    const idx = Math.round(frac * (pts.length - 1))
+    const clampedIdx = Math.max(0, Math.min(idx, pts.length - 1))
+    const pt = pts[clampedIdx]
+    const xp = layout.xPos(clampedIdx)
+    setTooltip({ x: xp, pt })
+    drawOverlay(clampedIdx)
+  }, [drawOverlay])
+
+  const handleMouseLeave = useCallback(() => {
+    setTooltip(null)
+    drawOverlay(null)
+  }, [drawOverlay])
 
   const first = points[0]?.rate
   const last = points[points.length - 1]?.rate
@@ -130,13 +270,40 @@ export function FXGraph() {
         </div>
 
         {/* Canvas */}
-        <div style={{ height: 100, position: 'relative' }}>
+        <div style={{ height: 160, position: 'relative' }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+        >
           {loading && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#7A9E8E' }}>
               Loading…
             </div>
           )}
-          <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+          <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block', position: 'absolute', inset: 0 }} />
+          <canvas ref={overlayRef} style={{ width: '100%', height: '100%', display: 'block', position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+
+          {/* Tooltip */}
+          {tooltip && (
+            <div style={{
+              position: 'absolute',
+              top: 10,
+              left: Math.min(tooltip.x + 10, 9999),
+              transform: tooltip.x > (canvasRef.current?.offsetWidth || 0) / 2 ? 'translateX(calc(-100% - 20px))' : 'none',
+              background: '#0E1F1A',
+              color: '#fff',
+              borderRadius: 8,
+              padding: '6px 10px',
+              fontSize: 12,
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+            }}>
+              <div style={{ fontWeight: 600 }}>₩{Math.round(tooltip.pt.rate).toLocaleString('ko-KR')}</div>
+              <div style={{ opacity: 0.65, fontSize: 10, marginTop: 2 }}>
+                {new Date(tooltip.pt.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
