@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-const RANGES = ['1D', '1W', '1M']
+const RANGES = ['1W', '1M', '3M', '1Y']
 
 function getRangeStart(range) {
   const d = new Date()
-  if (range === '1D') d.setDate(d.getDate() - 1)
-  else if (range === '1W') d.setDate(d.getDate() - 7)
-  else d.setMonth(d.getMonth() - 1)
-  return d.toISOString().slice(0, 10)
+  if (range === '1W') d.setDate(d.getDate() - 7)
+  else if (range === '1M') d.setMonth(d.getMonth() - 1)
+  else if (range === '3M') d.setMonth(d.getMonth() - 3)
+  else if (range === '1Y') d.setFullYear(d.getFullYear() - 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function niceYTicks(min, max, count = 4) {
@@ -35,6 +37,14 @@ export function FXGraph() {
   const [points, setPoints] = useState([])
   const [loading, setLoading] = useState(false)
   const [tooltip, setTooltip] = useState(null)
+  const [currentRate, setCurrentRate] = useState(null)
+
+  useEffect(() => {
+    fetch('https://api.frankfurter.dev/v1/latest?from=USD&to=KRW')
+      .then(r => r.json())
+      .then(data => setCurrentRate(data.rates?.KRW ?? null))
+      .catch(() => {})
+  }, [])
   const canvasRef = useRef(null)
   const overlayRef = useRef(null)
   const layoutRef = useRef(null)
@@ -75,7 +85,7 @@ export function FXGraph() {
     const yMin = yTicks[0]
     const yMax = yTicks[yTicks.length - 1]
 
-    const pad = { top: 12, bottom: 28, left: 62, right: 12 }
+    const pad = { top: 16, bottom: 30, left: 66, right: 32 }
     const chartW = W - pad.left - pad.right
     const chartH = H - pad.top - pad.bottom
 
@@ -94,7 +104,7 @@ export function FXGraph() {
     ctx.clearRect(0, 0, W, H)
 
     // Grid lines + Y labels
-    ctx.font = `${11 * dpr / dpr}px -apple-system, sans-serif`
+    ctx.font = `11px -apple-system, sans-serif`
     ctx.textAlign = 'right'
     ctx.textBaseline = 'middle'
     ctx.fillStyle = labelColor
@@ -102,15 +112,17 @@ export function FXGraph() {
       const yp = yPos(tick)
       ctx.strokeStyle = gridColor
       ctx.lineWidth = 1
+      ctx.setLineDash([4, 4])
       ctx.beginPath()
       ctx.moveTo(pad.left, yp)
       ctx.lineTo(W - pad.right, yp)
       ctx.stroke()
-      ctx.fillText(`₩${Math.round(tick).toLocaleString('ko-KR')}`, pad.left - 6, yp)
+      ctx.setLineDash([])
+      ctx.fillText(`₩${Math.round(tick).toLocaleString('ko-KR')}`, pad.left - 8, yp)
     })
 
     // X-axis date labels
-    const xLabelCount = Math.min(pts.length, range === '1D' ? 3 : range === '1W' ? 4 : 5)
+    const xLabelCount = Math.min(pts.length, range === '1Y' ? 6 : range === '1W' ? 4 : 3)
     const step = Math.max(1, Math.floor((pts.length - 1) / (xLabelCount - 1)))
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
@@ -226,8 +238,8 @@ export function FXGraph() {
 
   const first = points[0]?.rate
   const last = points[points.length - 1]?.rate
+  const isUp = first != null && last != null && last >= first
   const pct = first && last ? (((last - first) / first) * 100).toFixed(2) : null
-  const isUp = pct !== null && parseFloat(pct) >= 0
 
   return (
     <div style={{ padding: '16px 16px 0' }}>
@@ -239,7 +251,7 @@ export function FXGraph() {
               USD → KRW
             </div>
             <div style={{ fontSize: 20, fontWeight: 600, color: '#0E1F1A', letterSpacing: '-0.5px' }}>
-              {last ? `₩${Math.round(last).toLocaleString('ko-KR')}` : '—'}
+              {currentRate ? `₩${Math.round(currentRate).toLocaleString('ko-KR')}` : '—'}
             </div>
             {pct !== null && (
               <div style={{
@@ -270,7 +282,7 @@ export function FXGraph() {
         </div>
 
         {/* Canvas */}
-        <div style={{ height: 160, position: 'relative' }}
+        <div style={{ height: 180, position: 'relative' }}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         >
