@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth, SignIn } from '@clerk/clerk-react'
 import { useExchangeRate } from './hooks/useExchangeRate'
 import { Hero } from './components/Hero'
 import { AccountsGrid } from './components/AccountsGrid'
@@ -15,11 +16,20 @@ import { EmptyState } from './components/EmptyState'
 const DESKTOP_TABS = ['Home', 'Transactions', 'Calendar', 'Trends', 'Budget']
 
 export default function App() {
+  const { isLoaded, isSignedIn, getToken } = useAuth()
   const rate = useExchangeRate()
   const [accounts, setAccounts] = useState([])
   const [transactions, setTransactions] = useState([])
   const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(true)
+
+  const authFetch = useCallback(async (url, options = {}) => {
+    const token = await getToken()
+    return fetch(url, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...options.headers },
+    })
+  }, [getToken])
 
   const [mobileTab, setMobileTab] = useState('home')
   const [desktopTab, setDesktopTab] = useState('Home')
@@ -30,61 +40,60 @@ export default function App() {
   // Fetch all data on mount
   const fetchAll = useCallback(async () => {
     const [accs, txs, gls] = await Promise.all([
-      fetch('/api/accounts').then(r => r.json()),
-      fetch('/api/transactions').then(r => r.json()),
-      fetch('/api/goals').then(r => r.json()),
+      authFetch('/api/accounts').then(r => r.json()),
+      authFetch('/api/transactions').then(r => r.json()),
+      authFetch('/api/goals').then(r => r.json()),
     ])
     setAccounts(Array.isArray(accs) ? accs : [])
     setTransactions(Array.isArray(txs) ? txs : [])
     setGoals(Array.isArray(gls) ? gls : [])
     setLoading(false)
-  }, [])
+  }, [authFetch])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  useEffect(() => { if (isSignedIn) fetchAll() }, [fetchAll, isSignedIn])
 
   const addTransaction = async (tx) => {
-    await fetch('/api/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tx),
-    })
-    // Re-fetch accounts so balance reflects the atomic DB update
+    await authFetch('/api/transactions', { method: 'POST', body: JSON.stringify(tx) })
     const [accs, txs] = await Promise.all([
-      fetch('/api/accounts').then(r => r.json()),
-      fetch('/api/transactions').then(r => r.json()),
+      authFetch('/api/accounts').then(r => r.json()),
+      authFetch('/api/transactions').then(r => r.json()),
     ])
     setAccounts(accs)
     setTransactions(txs)
   }
 
   const addAccount = async (acc) => {
-    await fetch('/api/accounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(acc),
-    })
-    const accs = await fetch('/api/accounts').then(r => r.json())
+    await authFetch('/api/accounts', { method: 'POST', body: JSON.stringify(acc) })
+    const accs = await authFetch('/api/accounts').then(r => r.json())
     setAccounts(accs)
   }
 
   const addGoal = async (g) => {
-    await fetch('/api/goals', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(g),
-    })
-    const gls = await fetch('/api/goals').then(r => r.json())
+    await authFetch('/api/goals', { method: 'POST', body: JSON.stringify(g) })
+    const gls = await authFetch('/api/goals').then(r => r.json())
     setGoals(gls)
   }
 
   const updateGoal = async (g) => {
-    await fetch('/api/goals', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: g.id, savedAmount: g.savedAmount }),
-    })
-    const gls = await fetch('/api/goals').then(r => r.json())
+    await authFetch('/api/goals', { method: 'PATCH', body: JSON.stringify({ id: g.id, savedAmount: g.savedAmount }) })
+    const gls = await authFetch('/api/goals').then(r => r.json())
     setGoals(gls)
+  }
+
+  if (!isLoaded) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', color: '#7A9E8E', fontSize: 14 }}>
+        Loading…
+      </div>
+    )
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: '#F8FAF9' }}>
+        <SignIn routing="hash" />
+      </div>
+    )
   }
 
   if (loading) {
