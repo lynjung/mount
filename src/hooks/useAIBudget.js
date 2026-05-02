@@ -9,22 +9,10 @@ export function useAIBudget() {
     setLoading(true)
     setError(null)
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
-
-      const response = await fetch(url, {
+      const response = await fetch('/api/budget', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Based on these transactions this month: ${JSON.stringify(transactions)}
-Return ONLY valid JSON, no markdown formatting, no code fences, no explanation:
-{ "food": number, "transport": number, "shopping": number, "utilities": number, "entertainment": number }
-All values are suggested monthly budget limits in USD.`
-            }]
-          }]
-        })
+        body: JSON.stringify({ transactions }),
       })
 
       if (response.status === 429) {
@@ -32,17 +20,15 @@ All values are suggested monthly budget limits in USD.`
         return
       }
       if (!response.ok) {
-        setError(`Gemini error: ${response.status}`)
+        const { error: msg } = await response.json().catch(() => ({}))
+        setError(msg || `Error: ${response.status}`)
         return
       }
 
-      const data = await response.json()
-      const text = data.candidates[0].content.parts[0].text
-      const clean = text.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(clean)
-      setBudget(parsed)
+      const budget = await response.json()
+      setBudget(budget)
     } catch (e) {
-      setError('Something went wrong. Check your API key and try again.')
+      setError('Something went wrong. Please try again.')
       console.error('AI budget error:', e)
     } finally {
       setLoading(false)

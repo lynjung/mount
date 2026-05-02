@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useLocalStorage } from './hooks/useLocalStorage'
+import { useState, useEffect, useCallback } from 'react'
 import { useExchangeRate } from './hooks/useExchangeRate'
 import { Hero } from './components/Hero'
 import { AccountsGrid } from './components/AccountsGrid'
@@ -17,10 +16,10 @@ const DESKTOP_TABS = ['Home', 'Transactions', 'Calendar', 'Trends', 'Budget']
 
 export default function App() {
   const rate = useExchangeRate()
-  const [accounts, setAccounts] = useLocalStorage('mount_accounts', [])
-  const [goals, setGoals] = useLocalStorage('mount_goals', [])
-
-  const [transactions, setTransactions] = useLocalStorage('mount_transactions', [])
+  const [accounts, setAccounts] = useState([])
+  const [transactions, setTransactions] = useState([])
+  const [goals, setGoals] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const [mobileTab, setMobileTab] = useState('home')
   const [desktopTab, setDesktopTab] = useState('Home')
@@ -28,10 +27,73 @@ export default function App() {
   const [showAddAccount, setShowAddAccount] = useState(false)
   const [skippedEmpty, setSkippedEmpty] = useState(false)
 
-  const addTransaction = (tx) => setTransactions(prev => [tx, ...prev])
-  const addAccount = (acc) => setAccounts(prev => [...prev, acc])
-  const addGoal = (g) => setGoals(prev => [...prev, g])
-  const updateGoal = (g) => setGoals(prev => prev.map(x => x.id === g.id ? g : x))
+  // Fetch all data on mount
+  const fetchAll = useCallback(async () => {
+    const [accs, txs, gls] = await Promise.all([
+      fetch('/api/accounts').then(r => r.json()),
+      fetch('/api/transactions').then(r => r.json()),
+      fetch('/api/goals').then(r => r.json()),
+    ])
+    setAccounts(Array.isArray(accs) ? accs : [])
+    setTransactions(Array.isArray(txs) ? txs : [])
+    setGoals(Array.isArray(gls) ? gls : [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { fetchAll() }, [fetchAll])
+
+  const addTransaction = async (tx) => {
+    await fetch('/api/transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tx),
+    })
+    // Re-fetch accounts so balance reflects the atomic DB update
+    const [accs, txs] = await Promise.all([
+      fetch('/api/accounts').then(r => r.json()),
+      fetch('/api/transactions').then(r => r.json()),
+    ])
+    setAccounts(accs)
+    setTransactions(txs)
+  }
+
+  const addAccount = async (acc) => {
+    await fetch('/api/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(acc),
+    })
+    const accs = await fetch('/api/accounts').then(r => r.json())
+    setAccounts(accs)
+  }
+
+  const addGoal = async (g) => {
+    await fetch('/api/goals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(g),
+    })
+    const gls = await fetch('/api/goals').then(r => r.json())
+    setGoals(gls)
+  }
+
+  const updateGoal = async (g) => {
+    await fetch('/api/goals', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: g.id, savedAmount: g.savedAmount }),
+    })
+    const gls = await fetch('/api/goals').then(r => r.json())
+    setGoals(gls)
+  }
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', color: '#7A9E8E', fontSize: 14 }}>
+        Loading…
+      </div>
+    )
+  }
 
   if (accounts.length === 0 && !skippedEmpty) {
     return (
