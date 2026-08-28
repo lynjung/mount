@@ -35,7 +35,7 @@ function niceYTicks(min, max, count = 4) {
 export function FXGraph() {
   const [range, setRange] = useState('1M')
   const [points, setPoints] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [tooltip, setTooltip] = useState(null)
   const [currentRate, setCurrentRate] = useState(null)
 
@@ -50,20 +50,30 @@ export function FXGraph() {
   const layoutRef = useRef(null)
 
   useEffect(() => {
-    setLoading(true)
+    let active = true
     const start = getRangeStart(range)
     const end = todayStr()
+
     fetch(`https://api.frankfurter.dev/v1/${start}..${end}?from=USD&to=KRW`)
       .then(r => r.json())
       .then(data => {
+        if (!active) return
         const pts = Object.entries(data.rates || {})
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([date, val]) => ({ date, rate: val.KRW }))
           .filter(p => p.rate != null && isFinite(p.rate))
         setPoints(pts)
       })
-      .catch(e => console.error('FX history error:', e))
-      .finally(() => setLoading(false))
+      .catch(e => {
+        if (active) console.error('FX history error:', e)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
   }, [range])
 
   const drawChart = useCallback((pts) => {
@@ -240,6 +250,7 @@ export function FXGraph() {
   const last = points[points.length - 1]?.rate
   const isUp = first != null && last != null && last >= first
   const pct = first && last ? (((last - first) / first) * 100).toFixed(2) : null
+  const tooltipAlign = tooltip ? tooltip.x > 180 : false
 
   return (
     <div style={{ padding: '16px 16px 0' }}>
@@ -300,7 +311,7 @@ export function FXGraph() {
               position: 'absolute',
               top: 10,
               left: Math.min(tooltip.x + 10, 9999),
-              transform: tooltip.x > (canvasRef.current?.offsetWidth || 0) / 2 ? 'translateX(calc(-100% - 20px))' : 'none',
+              transform: tooltipAlign ? 'translateX(calc(-100% - 20px))' : 'none',
               background: '#0E1F1A',
               color: '#fff',
               borderRadius: 8,

@@ -3,7 +3,6 @@ import { getUserId } from './_auth.js'
 
 export default async function handler(req, res) {
   const userId = await getUserId(req)
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
   if (req.method === 'GET') {
     const transactions = await sql`

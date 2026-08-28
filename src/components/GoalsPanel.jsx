@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { fmt, fmtUSD } from '../utils/currency'
+import { fmt } from '../utils/currency'
 
 export function GoalsPanel({ goals, accounts, onAdd, onUpdate }) {
   const [showForm, setShowForm] = useState(false)
+  void onUpdate
 
   return (
     <div style={{ padding: '16px 16px 0' }}>
@@ -11,7 +12,7 @@ export function GoalsPanel({ goals, accounts, onAdd, onUpdate }) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {goals.map(g => <GoalCard key={g.id} goal={g} onUpdate={onUpdate} />)}
+        {goals.map(g => <GoalCard key={g.id} goal={g} />)}
 
         {/* Add new goal — dashed card */}
         {!showForm ? (
@@ -34,7 +35,7 @@ export function GoalsPanel({ goals, accounts, onAdd, onUpdate }) {
   )
 }
 
-function GoalCard({ goal, onUpdate }) {
+function GoalCard({ goal }) {
   const { emoji, name, savedAmount, targetAmount, currency, targetDate } = goal
   const pct = targetAmount > 0 ? Math.min((savedAmount / targetAmount) * 100, 100) : 0
   const isNearDone = pct >= 90

@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useAuth, SignIn } from '@clerk/clerk-react'
+import { useState, useCallback } from 'react'
 import { useExchangeRate } from './hooks/useExchangeRate'
 import { Hero } from './components/Hero'
 import { AccountsGrid } from './components/AccountsGrid'
@@ -12,24 +11,31 @@ import { AddAccountModal } from './components/AddAccountModal'
 import { BudgetPanel } from './components/BudgetPanel'
 import { GoalsPanel } from './components/GoalsPanel'
 import { EmptyState } from './components/EmptyState'
+import { seedIfEmpty } from './utils/seedData'
 
 const DESKTOP_TABS = ['Home', 'Transactions', 'Calendar', 'Trends', 'Budget']
 
-export default function App() {
-  const { isLoaded, isSignedIn, getToken } = useAuth()
-  const rate = useExchangeRate()
-  const [accounts, setAccounts] = useState([])
-  const [transactions, setTransactions] = useState([])
-  const [goals, setGoals] = useState([])
-  const [loading, setLoading] = useState(true)
+function readLocalList(key, fallback = []) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(key) || 'null')
+    return Array.isArray(stored) ? stored : fallback
+  } catch {
+    return fallback
+  }
+}
 
-  const authFetch = useCallback(async (url, options = {}) => {
-    const token = await getToken()
-    return fetch(url, {
-      ...options,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...options.headers },
-    })
-  }, [getToken])
+function writeLocalList(key, value) {
+  localStorage.setItem(key, JSON.stringify(value))
+}
+
+export default function App() {
+  const rate = useExchangeRate()
+  const [accounts, setAccounts] = useState(() => {
+    seedIfEmpty()
+    return readLocalList('mount_accounts', [])
+  })
+  const [transactions, setTransactions] = useState(() => readLocalList('mount_transactions', []))
+  const [goals, setGoals] = useState(() => readLocalList('mount_goals', []))
 
   const [mobileTab, setMobileTab] = useState('home')
   const [desktopTab, setDesktopTab] = useState('Home')
@@ -37,72 +43,36 @@ export default function App() {
   const [showAddAccount, setShowAddAccount] = useState(false)
   const [skippedEmpty, setSkippedEmpty] = useState(false)
 
-  // Fetch all data on mount
-  const fetchAll = useCallback(async () => {
-    const [accs, txs, gls] = await Promise.all([
-      authFetch('/api/accounts').then(r => r.json()),
-      authFetch('/api/transactions').then(r => r.json()),
-      authFetch('/api/goals').then(r => r.json()),
-    ])
-    setAccounts(Array.isArray(accs) ? accs : [])
-    setTransactions(Array.isArray(txs) ? txs : [])
-    setGoals(Array.isArray(gls) ? gls : [])
-    setLoading(false)
-  }, [authFetch])
+  const addTransaction = useCallback((tx) => {
+    const nextTxs = [...transactions, tx]
+    const nextAccounts = accounts.map(account => {
+      if (account.id !== tx.accountId) return account
+      const delta = tx.type === 'expense' ? -tx.amount : tx.amount
+      return { ...account, balance: Number((account.balance + delta).toFixed(2)) }
+    })
+    setTransactions(nextTxs)
+    setAccounts(nextAccounts)
+    writeLocalList('mount_transactions', nextTxs)
+    writeLocalList('mount_accounts', nextAccounts)
+  }, [accounts, transactions])
 
-  useEffect(() => { if (isSignedIn) fetchAll() }, [fetchAll, isSignedIn])
+  const addAccount = useCallback((acc) => {
+    const nextAccounts = [...accounts, acc]
+    setAccounts(nextAccounts)
+    writeLocalList('mount_accounts', nextAccounts)
+  }, [accounts])
 
-  const addTransaction = async (tx) => {
-    await authFetch('/api/transactions', { method: 'POST', body: JSON.stringify(tx) })
-    const [accs, txs] = await Promise.all([
-      authFetch('/api/accounts').then(r => r.json()),
-      authFetch('/api/transactions').then(r => r.json()),
-    ])
-    setAccounts(accs)
-    setTransactions(txs)
-  }
+  const addGoal = useCallback((g) => {
+    const nextGoals = [...goals, g]
+    setGoals(nextGoals)
+    writeLocalList('mount_goals', nextGoals)
+  }, [goals])
 
-  const addAccount = async (acc) => {
-    await authFetch('/api/accounts', { method: 'POST', body: JSON.stringify(acc) })
-    const accs = await authFetch('/api/accounts').then(r => r.json())
-    setAccounts(accs)
-  }
-
-  const addGoal = async (g) => {
-    await authFetch('/api/goals', { method: 'POST', body: JSON.stringify(g) })
-    const gls = await authFetch('/api/goals').then(r => r.json())
-    setGoals(gls)
-  }
-
-  const updateGoal = async (g) => {
-    await authFetch('/api/goals', { method: 'PATCH', body: JSON.stringify({ id: g.id, savedAmount: g.savedAmount }) })
-    const gls = await authFetch('/api/goals').then(r => r.json())
-    setGoals(gls)
-  }
-
-  if (!isLoaded) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', color: '#7A9E8E', fontSize: 14 }}>
-        Loading…
-      </div>
-    )
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: '#F8FAF9' }}>
-        <SignIn routing="hash" />
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', color: '#7A9E8E', fontSize: 14 }}>
-        Loading…
-      </div>
-    )
-  }
+  const updateGoal = useCallback((g) => {
+    const nextGoals = goals.map(goal => goal.id === g.id ? { ...goal, savedAmount: g.savedAmount } : goal)
+    setGoals(nextGoals)
+    writeLocalList('mount_goals', nextGoals)
+  }, [goals])
 
   if (accounts.length === 0 && !skippedEmpty) {
     return (

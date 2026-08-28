@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export const PALETTES = {
+const PALETTES = {
   'Forest & Nature': ['#0E1F1A','#1A3D30','#2A5C48','#2D6A4F','#52B788','#95D5B2','#B7E4C7','#D8F3DC'],
   'Ocean & Sky':     ['#023E8A','#0077B6','#0096C7','#00B4D8','#48CAE4','#4361EE','#4CC9F0','#90E0EF'],
   'Warm & Earthy':   ['#7F4F24','#936639','#B08968','#DDA15E','#E76F51','#F4A261','#E9C46A','#FEFAE0'],

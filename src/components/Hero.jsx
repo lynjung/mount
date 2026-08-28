@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Logo } from './Logo'
-import { fmtUSD, fmtKRW, toUSD, toKRW } from '../utils/currency'
+import { fmtUSD, fmtKRW, toUSD } from '../utils/currency'
 
 export function Hero({ accounts, transactions, rate }) {
   const [currency, setCurrency] = useState('usd')
