@@ -1,5 +1,68 @@
 export const MODEL_CANDIDATES = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite']
+export const BUDGET_KEYS = ['food', 'transport', 'shopping', 'utilities', 'entertainment']
 const GEMINI_API_VERSION = 'v1beta'
+const MAX_REASONABLE_LIMIT = 100000
+
+function toRoundedNumber(value) {
+  return Number(Number(value).toFixed(2))
+}
+
+export function sanitizeBudgetValue(value) {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value < 0 || value > MAX_REASONABLE_LIMIT) return null
+    return toRoundedNumber(value)
+  }
+
+  if (typeof value !== 'string') return null
+
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const cleaned = trimmed
+    .replace(/[$€£¥]/g, '')
+    .replace(/,/g, '')
+    .replace(/\s+/g, '')
+
+  if (!/^-?(?:\d+|\d*\.\d+)$/.test(cleaned)) return null
+
+  const parsed = Number(cleaned)
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_REASONABLE_LIMIT) return null
+
+  return toRoundedNumber(parsed)
+}
+
+export function buildDeterministicFallback(summary = {}) {
+  return BUDGET_KEYS.reduce((acc, key) => {
+    const spent = Number(summary[key]) || 0
+    acc[key] = toRoundedNumber(Math.max(0, Math.min(spent, MAX_REASONABLE_LIMIT)))
+    return acc
+  }, {})
+}
+
+export function normalizeBudgetObject(rawBudget, summary = {}) {
+  const fallback = buildDeterministicFallback(summary)
+  if (!rawBudget || typeof rawBudget !== 'object') {
+    return fallback
+  }
+
+  const monthlyTotal = Object.values(summary).reduce((sum, value) => sum + (Number(value) || 0), 0)
+  const incomeEstimate = Math.max(1000, monthlyTotal * 1.5)
+
+  return BUDGET_KEYS.reduce((acc, key) => {
+    const rawValue = rawBudget[key]
+    const sanitized = sanitizeBudgetValue(rawValue)
+    const spent = Number(summary[key]) || 0
+    const maxAllowed = Math.min(
+      MAX_REASONABLE_LIMIT,
+      Math.max(500, spent * 5, Math.max(0, incomeEstimate * 0.75) / BUDGET_KEYS.length)
+    )
+
+    const isValid = sanitized !== null && Number.isFinite(sanitized) && sanitized >= 0 && sanitized <= maxAllowed
+
+    acc[key] = isValid ? toRoundedNumber(sanitized) : fallback[key]
+    return acc
+  }, {})
+}
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
@@ -57,13 +120,16 @@ export default async function handler(req, res) {
       if (geminiRes.ok) {
         const data = await geminiRes.json()
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-        const clean = text.replace(/```json|```/g, '').trim()
+        const clean = (text || '').replace(/```json|```/g, '').trim()
 
         try {
-          const budget = JSON.parse(clean)
+          const match = clean.match(/\{[\s\S]*\}/)
+          const candidate = match ? match[0] : clean
+          const parsed = JSON.parse(candidate)
+          const budget = normalizeBudgetObject(parsed, normalizedSummary)
           return res.status(200).json(budget)
         } catch {
-          return res.status(502).json({ ok: false, error: 'Failed to parse Gemini response.' })
+          return res.status(200).json(buildDeterministicFallback(normalizedSummary))
         }
       }
 
