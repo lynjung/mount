@@ -1,4 +1,5 @@
-const MODEL_CANDIDATES = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-lite']
+export const MODEL_CANDIDATES = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite']
+const GEMINI_API_VERSION = 'v1beta'
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
@@ -38,7 +39,7 @@ export default async function handler(req, res) {
   let lastError = null
 
   for (const model of MODEL_CANDIDATES) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+    const url = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${model}:generateContent?key=${apiKey}`
 
     try {
       const geminiRes = await fetch(url, {
