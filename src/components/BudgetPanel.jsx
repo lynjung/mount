@@ -55,16 +55,14 @@ export function BudgetPanel({ transactions, rate }) {
             <div style={{ fontSize: 28, marginBottom: 8 }}>✦</div>
             <div style={{ fontSize: 13, color: '#4A6B5C', fontWeight: 500, marginBottom: 4 }}>AI Budget Suggestions</div>
             <div style={{ fontSize: 12, color: '#7A9E8E' }}>
-              {import.meta.env.VITE_GEMINI_API_KEY
-                ? 'Generate personalized budget limits based on this month\'s spending.'
-                : 'Add VITE_GEMINI_API_KEY to .env to enable AI budgets.'}
+              Secure Gemini analysis runs on the server and only uses a category spend summary.
             </div>
           </div>
         )}
 
         {loading && (
           <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: '#7A9E8E' }}>
-            Analyzing your transactions…
+            Analyzing your spending summary…
           </div>
         )}
 

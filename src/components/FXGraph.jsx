@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { calculatePercentChange } from '../utils/fx'
 
 const RANGES = ['1W', '1M', '3M', '1Y']
 
@@ -246,10 +247,8 @@ export function FXGraph() {
     drawOverlay(null)
   }, [drawOverlay])
 
-  const first = points[0]?.rate
-  const last = points[points.length - 1]?.rate
-  const isUp = first != null && last != null && last >= first
-  const pct = first && last ? (((last - first) / first) * 100).toFixed(2) : null
+  const pct = points.length > 1 ? calculatePercentChange(points) : null
+  const isUp = pct == null ? false : pct >= 0
   const tooltipAlign = tooltip ? tooltip.x > 180 : false
 
   return (
@@ -279,13 +278,20 @@ export function FXGraph() {
           {/* Range toggle */}
           <div style={{ display: 'flex', gap: 4 }}>
             {RANGES.map(r => (
-              <button key={r} onClick={() => setRange(r)} style={{
-                fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 8,
-                border: `1px solid ${range === r ? '#1A3D30' : '#E8F5F0'}`,
-                background: range === r ? '#1A3D30' : 'transparent',
-                color: range === r ? '#E8F5F0' : '#7A9E8E',
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}>
+              <button
+                key={r}
+                type="button"
+                aria-label={`Show ${r} FX change`}
+                aria-pressed={range === r}
+                onClick={() => setRange(r)}
+                style={{
+                  fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 8,
+                  border: `1px solid ${range === r ? '#1A3D30' : '#E8F5F0'}`,
+                  background: range === r ? '#1A3D30' : 'transparent',
+                  color: range === r ? '#E8F5F0' : '#7A9E8E',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
                 {r}
               </button>
             ))}
@@ -293,7 +299,8 @@ export function FXGraph() {
         </div>
 
         {/* Canvas */}
-        <div style={{ height: 180, position: 'relative' }}
+        <div
+          style={{ height: 180, position: 'relative' }}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         >
@@ -302,8 +309,8 @@ export function FXGraph() {
               Loading…
             </div>
           )}
-          <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block', position: 'absolute', inset: 0 }} />
-          <canvas ref={overlayRef} style={{ width: '100%', height: '100%', display: 'block', position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+          <canvas aria-label="USD to KRW exchange rate chart" ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block', position: 'absolute', inset: 0 }} />
+          <canvas aria-hidden="true" ref={overlayRef} style={{ width: '100%', height: '100%', display: 'block', position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 
           {/* Tooltip */}
           {tooltip && (

@@ -47,11 +47,11 @@ export function CalendarView({ transactions, accounts, rate }) {
     <div>
       {/* Month header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 10px' }}>
-        <button onClick={prevMonth} style={navBtn}>‹</button>
+        <button type="button" aria-label="Previous month" onClick={prevMonth} style={navBtn}>‹</button>
         <span style={{ fontSize: 15, fontWeight: 600, color: '#0E1F1A' }}>
           {MONTH_NAMES[month]} {year}
         </span>
-        <button onClick={nextMonth} style={navBtn}>›</button>
+        <button type="button" aria-label="Next month" onClick={nextMonth} style={navBtn}>›</button>
       </div>
 
       {/* Day-of-week headers */}

@@ -56,10 +56,13 @@ export function Hero({ accounts, transactions, rate }) {
         {secondaryBalance}
       </div>
 
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24 }} aria-label="Select display currency">
         {['usd', 'krw'].map(c => (
-          <div
+          <button
             key={c}
+            type="button"
+            aria-pressed={currency === c}
+            aria-label={c === 'usd' ? 'Display USD totals' : 'Display KRW totals'}
             onClick={() => setCurrency(c)}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -68,10 +71,11 @@ export function Hero({ accounts, transactions, rate }) {
               background: currency === c ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)',
               color: currency === c ? '#E8F5F0' : 'rgba(232,245,240,0.45)',
               border: `1px solid ${currency === c ? 'rgba(255,255,255,0.36)' : 'rgba(255,255,255,0.12)'}`,
+              fontFamily: 'inherit',
             }}
           >
             {c === 'usd' ? '$ USD' : '₩ KRW'}
-          </div>
+          </button>
         ))}
       </div>
 

@@ -11,7 +11,7 @@ import { AddAccountModal } from './components/AddAccountModal'
 import { BudgetPanel } from './components/BudgetPanel'
 import { GoalsPanel } from './components/GoalsPanel'
 import { EmptyState } from './components/EmptyState'
-import { seedIfEmpty } from './utils/seedData'
+import { seedIfEmpty, resetDemoData, DEMO_MODE_KEY } from './utils/seedData'
 
 const DESKTOP_TABS = ['Home', 'Transactions', 'Calendar', 'Trends', 'Budget']
 
@@ -30,6 +30,7 @@ function writeLocalList(key, value) {
 
 export default function App() {
   const rate = useExchangeRate()
+  const [demoMode, setDemoMode] = useState(() => localStorage.getItem(DEMO_MODE_KEY) === 'true')
   const [accounts, setAccounts] = useState(() => {
     seedIfEmpty()
     return readLocalList('mount_accounts', [])
@@ -74,6 +75,14 @@ export default function App() {
     writeLocalList('mount_goals', nextGoals)
   }, [goals])
 
+  const restoreDemoData = useCallback(() => {
+    resetDemoData()
+    setAccounts(readLocalList('mount_accounts', []))
+    setTransactions(readLocalList('mount_transactions', []))
+    setGoals(readLocalList('mount_goals', []))
+    setDemoMode(true)
+  }, [])
+
   if (accounts.length === 0 && !skippedEmpty) {
     return (
       <>
@@ -90,6 +99,20 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+      {demoMode && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, padding: '12px 16px 0' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 999, padding: '4px 10px', background: '#E8F5F0', color: '#1A3D30', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            Demo Data
+          </span>
+          <button
+            type="button"
+            onClick={restoreDemoData}
+            style={{ border: '1px solid #D8F3DC', background: '#fff', borderRadius: 999, padding: '6px 10px', color: '#1A3D30', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Reset demo
+          </button>
+        </div>
+      )}
 
       {/* ── Desktop top tabs (hidden on mobile) ── */}
       <div className="desktop-tabs">

@@ -33,13 +33,14 @@ export function AddTransactionModal({ accounts, onSave, onClose }) {
   }
 
   return (
-    <Overlay onClose={onClose}>
+    <Overlay onClose={onClose} title="Add transaction">
       <div style={{ fontSize: 16, fontWeight: 600, color: '#0E1F1A', marginBottom: 20 }}>
         Add Transaction
       </div>
 
-      <Field label="Name">
+      <Field label="Name" id="transaction-name">
         <input
+          id="transaction-name"
           autoFocus
           value={form.name}
           onChange={e => set('name', e.target.value)}
@@ -60,8 +61,9 @@ export function AddTransactionModal({ accounts, onSave, onClose }) {
       </Field>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="Amount">
+        <Field label="Amount" id="transaction-amount">
           <input
+            id="transaction-amount"
             type="number" min="0" step="0.01"
             value={form.amount}
             onChange={e => set('amount', e.target.value)}
@@ -69,16 +71,16 @@ export function AddTransactionModal({ accounts, onSave, onClose }) {
             style={inputStyle}
           />
         </Field>
-        <Field label="Currency">
-          <select value={form.currency} onChange={e => set('currency', e.target.value)} style={inputStyle}>
+        <Field label="Currency" id="transaction-currency">
+          <select id="transaction-currency" value={form.currency} onChange={e => set('currency', e.target.value)} style={inputStyle}>
             <option value="USD">USD</option>
             <option value="KRW">KRW</option>
           </select>
         </Field>
       </div>
 
-      <Field label="Account">
-        <select value={form.accountId} onChange={e => set('accountId', e.target.value)} style={inputStyle}>
+      <Field label="Account" id="transaction-account">
+        <select id="transaction-account" value={form.accountId} onChange={e => set('accountId', e.target.value)} style={inputStyle}>
           {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </Field>
@@ -102,12 +104,12 @@ export function AddTransactionModal({ accounts, onSave, onClose }) {
         </div>
       </Field>
 
-      <Field label="Date">
-        <input type="date" value={form.date} onChange={e => set('date', e.target.value)} style={inputStyle} />
+      <Field label="Date" id="transaction-date">
+        <input id="transaction-date" type="date" value={form.date} onChange={e => set('date', e.target.value)} style={inputStyle} />
       </Field>
 
-      <Field label="Note (optional)">
-        <input value={form.note} onChange={e => set('note', e.target.value)} placeholder="Add a note…" style={inputStyle} />
+      <Field label="Note (optional)" id="transaction-note">
+        <input id="transaction-note" value={form.note} onChange={e => set('note', e.target.value)} placeholder="Add a note…" style={inputStyle} />
       </Field>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
@@ -129,9 +131,12 @@ export function AddTransactionModal({ accounts, onSave, onClose }) {
   )
 }
 
-function Overlay({ onClose, children }) {
+function Overlay({ onClose, title, children }) {
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, background: 'rgba(14,31,26,0.5)',
@@ -153,12 +158,12 @@ function Overlay({ onClose, children }) {
   )
 }
 
-function Field({ label, children }) {
+function Field({ label, id, children }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{ fontSize: 11, fontWeight: 500, color: '#4A6B5C', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
+      <label htmlFor={id} style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#4A6B5C', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
         {label}
-      </div>
+      </label>
       {children}
     </div>
   )
@@ -166,12 +171,17 @@ function Field({ label, children }) {
 
 function TypeBtn({ children, active, onClick, color }) {
   return (
-    <button onClick={onClick} style={{
-      flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 500, borderRadius: 10,
-      border: `1.5px solid ${active ? color : '#E8F5F0'}`,
-      background: active ? color + '18' : '#F8FAF9',
-      color: active ? color : '#7A9E8E', cursor: 'pointer', fontFamily: 'inherit',
-    }}>
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      style={{
+        flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 500, borderRadius: 10,
+        border: `1.5px solid ${active ? color : '#E8F5F0'}`,
+        background: active ? color + '18' : '#F8FAF9',
+        color: active ? color : '#7A9E8E', cursor: 'pointer', fontFamily: 'inherit',
+      }}
+    >
       {children}
     </button>
   )
@@ -179,17 +189,24 @@ function TypeBtn({ children, active, onClick, color }) {
 
 function Toggle({ checked, onChange }) {
   return (
-    <div onClick={() => onChange(!checked)} style={{
-      width: 36, height: 20, borderRadius: 10, cursor: 'pointer',
-      background: checked ? '#1A3D30' : '#D8F3DC',
-      position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-    }}>
+    <button
+      type="button"
+      aria-label={checked ? 'Recurring transaction enabled' : 'Recurring transaction disabled'}
+      aria-pressed={checked}
+      onClick={() => onChange(!checked)}
+      style={{
+        width: 36, height: 20, borderRadius: 10, cursor: 'pointer',
+        background: checked ? '#1A3D30' : '#D8F3DC',
+        position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+        border: 'none', padding: 0,
+      }}
+    >
       <div style={{
         position: 'absolute', top: 3, left: checked ? 18 : 3,
         width: 14, height: 14, borderRadius: '50%', background: '#fff',
         transition: 'left 0.2s',
       }} />
-    </div>
+    </button>
   )
 }
 

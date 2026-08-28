@@ -92,17 +92,25 @@ export const SEED_SETTINGS = {
   userInitials: '',
 }
 
-export function seedIfEmpty() {
-  if (!localStorage.getItem('mount_accounts')) {
+export const DEMO_MODE_KEY = 'mount_demo_mode'
+
+export function seedIfEmpty(force = false) {
+  const shouldSeed = force || !localStorage.getItem('mount_accounts') || !localStorage.getItem('mount_transactions') || !localStorage.getItem('mount_goals')
+
+  if (shouldSeed) {
     localStorage.setItem('mount_accounts', JSON.stringify(SEED_ACCOUNTS))
-  }
-  if (!localStorage.getItem('mount_transactions')) {
     localStorage.setItem('mount_transactions', JSON.stringify(SEED_TRANSACTIONS))
-  }
-  if (!localStorage.getItem('mount_goals')) {
     localStorage.setItem('mount_goals', JSON.stringify(SEED_GOALS))
-  }
-  if (!localStorage.getItem('mount_settings')) {
     localStorage.setItem('mount_settings', JSON.stringify(SEED_SETTINGS))
+    localStorage.setItem(DEMO_MODE_KEY, 'true')
   }
 }
+
+export function resetDemoData() {
+  localStorage.setItem('mount_accounts', JSON.stringify(SEED_ACCOUNTS))
+  localStorage.setItem('mount_transactions', JSON.stringify(SEED_TRANSACTIONS))
+  localStorage.setItem('mount_goals', JSON.stringify(SEED_GOALS))
+  localStorage.setItem('mount_settings', JSON.stringify(SEED_SETTINGS))
+  localStorage.setItem(DEMO_MODE_KEY, 'true')
+}
+

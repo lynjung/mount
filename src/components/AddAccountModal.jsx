@@ -48,7 +48,7 @@ export function AddAccountModal({ onSave, onClose }) {
   }
 
   return (
-    <Overlay onClose={onClose}>
+    <Overlay onClose={onClose} title="Add account">
       {/* Step indicator */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
         {STEPS.map((label, i) => (
@@ -99,8 +99,9 @@ export function AddAccountModal({ onSave, onClose }) {
             Account details
           </div>
 
-          <Field label="Account Name">
+          <Field label="Account Name" id="account-name">
             <input
+              id="account-name"
               autoFocus
               value={form.name}
               onChange={e => set('name', e.target.value)}
@@ -110,8 +111,9 @@ export function AddAccountModal({ onSave, onClose }) {
           </Field>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label="Opening Balance">
+            <Field label="Opening Balance" id="account-balance">
               <input
+                id="account-balance"
                 type="number" step="0.01"
                 value={form.balance}
                 onChange={e => set('balance', e.target.value)}
@@ -119,8 +121,8 @@ export function AddAccountModal({ onSave, onClose }) {
                 style={inputStyle}
               />
             </Field>
-            <Field label="Currency">
-              <select value={form.currency} onChange={e => set('currency', e.target.value)} style={inputStyle}>
+            <Field label="Currency" id="account-currency">
+              <select id="account-currency" value={form.currency} onChange={e => set('currency', e.target.value)} style={inputStyle}>
                 <option value="USD">USD</option>
                 <option value="KRW">KRW</option>
               </select>
@@ -176,9 +178,12 @@ export function AddAccountModal({ onSave, onClose }) {
   )
 }
 
-function Overlay({ onClose, children }) {
+function Overlay({ onClose, title, children }) {
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, background: 'rgba(14,31,26,0.5)',
@@ -200,12 +205,12 @@ function Overlay({ onClose, children }) {
   )
 }
 
-function Field({ label, children }) {
+function Field({ label, id, children }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{ fontSize: 11, fontWeight: 500, color: '#4A6B5C', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
+      <label htmlFor={id} style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#4A6B5C', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
         {label}
-      </div>
+      </label>
       {children}
     </div>
   )

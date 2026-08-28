@@ -125,20 +125,20 @@ function NewGoalForm({ accounts, onSave, onCancel }) {
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <div style={labelStyle}>Goal Name</div>
-        <input value={form.name} onChange={e => set('name', e.target.value)}
+        <label htmlFor="goal-name" style={labelStyle}>Goal Name</label>
+        <input id="goal-name" value={form.name} onChange={e => set('name', e.target.value)}
           placeholder="e.g. Emergency Fund" style={inputStyle} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
         <div>
-          <div style={labelStyle}>Target Amount</div>
-          <input type="number" min="0" value={form.targetAmount} onChange={e => set('targetAmount', e.target.value)}
+          <label htmlFor="goal-target-amount" style={labelStyle}>Target Amount</label>
+          <input id="goal-target-amount" type="number" min="0" value={form.targetAmount} onChange={e => set('targetAmount', e.target.value)}
             placeholder="0" style={inputStyle} />
         </div>
         <div>
-          <div style={labelStyle}>Currency</div>
-          <select value={form.currency} onChange={e => set('currency', e.target.value)} style={inputStyle}>
+          <label htmlFor="goal-currency" style={labelStyle}>Currency</label>
+          <select id="goal-currency" value={form.currency} onChange={e => set('currency', e.target.value)} style={inputStyle}>
             <option value="USD">USD</option>
             <option value="KRW">KRW</option>
           </select>
@@ -147,13 +147,13 @@ function NewGoalForm({ accounts, onSave, onCancel }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
         <div>
-          <div style={labelStyle}>Already Saved</div>
-          <input type="number" min="0" value={form.savedAmount} onChange={e => set('savedAmount', e.target.value)}
+          <label htmlFor="goal-saved-amount" style={labelStyle}>Already Saved</label>
+          <input id="goal-saved-amount" type="number" min="0" value={form.savedAmount} onChange={e => set('savedAmount', e.target.value)}
             placeholder="0" style={inputStyle} />
         </div>
         <div>
-          <div style={labelStyle}>Target Date</div>
-          <input type="date" value={form.targetDate} onChange={e => set('targetDate', e.target.value)} style={inputStyle} />
+          <label htmlFor="goal-target-date" style={labelStyle}>Target Date</label>
+          <input id="goal-target-date" type="date" value={form.targetDate} onChange={e => set('targetDate', e.target.value)} style={inputStyle} />
         </div>
       </div>
 

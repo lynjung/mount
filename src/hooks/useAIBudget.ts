@@ -10,26 +10,32 @@ export function useAIBudget() {
     setLoading(true)
     setError(null)
     try {
+      const summary = transactions.reduce<Record<string, number>>((acc, tx) => {
+        if (tx.type !== 'expense') return acc
+        acc[tx.category] = (acc[tx.category] ?? 0) + Math.abs(tx.amount)
+        return acc
+      }, {})
+
       const response = await fetch('/api/budget', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions }),
+        body: JSON.stringify({ summary }),
       })
 
       if (response.status === 429) {
-        setError('Rate limited — try again in a moment.')
+        setError('Rate limit reached. Please wait a minute and try again.')
         return
       }
       if (!response.ok) {
         const { error: msg } = await response.json().catch(() => ({})) as { error?: string }
-        setError(msg ?? `Error: ${response.status}`)
+        setError(msg ?? `Unable to generate budget right now (${response.status}).`)
         return
       }
 
-      const budget = await response.json() as Budget
-      setBudget(budget)
+      const nextBudget = await response.json() as Budget
+      setBudget(nextBudget)
     } catch (e) {
-      setError('Something went wrong. Please try again.')
+      setError('Something went wrong while generating AI budget suggestions.')
       console.error('AI budget error:', e)
     } finally {
       setLoading(false)

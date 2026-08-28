@@ -19,9 +19,10 @@ A previous Clerk integration was causing the Vercel site to stop at a permanent 
 - USD/KRW conversions and exchange-rate-based totals
 - Transaction search, account filtering, category filtering, and type filtering
 - Calendar view for daily income and expense totals
-- FX trend graph for USD to KRW using Frankfurter data
+- FX trend graph for USD to KRW using Frankfurter data with a one-hour browser cache
 - Savings goals with progress bars and target-date tracking
-- AI budget suggestions via Gemini when a key is configured
+- AI budget suggestions generated through a secure serverless endpoint that stores the Gemini secret server-side
+- Demo data mode with a clear indicator and reset-demo action
 - Empty-state onboarding for adding the first account
 - Responsive layout tuned for mobile and desktop
 
@@ -35,7 +36,7 @@ A previous Clerk integration was causing the Vercel site to stop at a permanent 
   - `https://api.frankfurter.dev/v1/latest?from=USD&to=KRW`
   - `https://api.frankfurter.dev/v1/{start}..{end}?from=USD&to=KRW`
   - `https://api.exchangerate-api.com/v4/latest/USD`
-  - Optional Gemini API for AI budget generation
+  - Secure Gemini API call routed through `api/budget.js` so the key stays server-side
 
 ## Project structure
 
@@ -63,19 +64,19 @@ The app does not require auth or secrets for the default local-only experience.
 
 Optional variables:
 
-- `VITE_GEMINI_API_KEY` – enables the AI budget generator in the UI
-- `GEMINI_API_KEY` – used by the serverless budget endpoint when calling Gemini
+- `GEMINI_API_KEY` – used only by the secure serverless budget endpoint when calling Gemini
 - `DATABASE_URL` – only needed if you later re-enable the legacy database-backed API routes
 - `CRON_SECRET` – only needed for scheduled recurring-job protection in the optional API cron route
 
 Example `.env.local`:
 
 ```bash
-VITE_GEMINI_API_KEY=your_key_here
 GEMINI_API_KEY=your_key_here
 DATABASE_URL=postgres://user:password@host:5432/db
 CRON_SECRET=replace-with-random-secret
 ```
+
+Do not expose the Gemini key in any `VITE_` variable because those values are bundled into the client.
 
 Do not commit secrets or real production credentials to Git.
 
