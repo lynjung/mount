@@ -14,6 +14,7 @@ import { EmptyState } from './components/EmptyState'
 import { seedIfEmpty, resetDemoData, DEMO_MODE_KEY } from './utils/seedData'
 
 const DESKTOP_TABS = ['Home', 'Transactions', 'Calendar', 'Trends', 'Budget']
+const BUILD_VERSION = import.meta.env.VITE_APP_VERSION || 'dev'
 
 function readLocalList(key, fallback = []) {
   try {
@@ -103,20 +104,25 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-      {demoMode && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, padding: '12px 16px 0' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 999, padding: '4px 10px', background: '#E8F5F0', color: '#1A3D30', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            Demo Data
-          </span>
-          <button
-            type="button"
-            onClick={restoreDemoData}
-            style={{ border: '1px solid #D8F3DC', background: '#fff', borderRadius: 999, padding: '6px 10px', color: '#1A3D30', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            Reset demo
-          </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '12px 16px 0' }}>
+        <div style={{ fontSize: 10, color: '#7A9E8E', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>
+          Build {BUILD_VERSION}
         </div>
-      )}
+        {demoMode && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 999, padding: '4px 10px', background: '#E8F5F0', color: '#1A3D30', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Demo Data
+            </span>
+            <button
+              type="button"
+              onClick={restoreDemoData}
+              style={{ border: '1px solid #D8F3DC', background: '#fff', borderRadius: 999, padding: '6px 10px', color: '#1A3D30', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Reset demo
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* ── Desktop top tabs (hidden on mobile) ── */}
       <div className="desktop-tabs">

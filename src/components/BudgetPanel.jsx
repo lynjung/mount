@@ -4,6 +4,7 @@ import { toUSD } from '../utils/currency'
 import { CATEGORIES } from '../utils/categories'
 
 const BUDGET_CATS = ['food', 'transport', 'shopping', 'utilities', 'entertainment']
+const moneyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
 
 export function BudgetPanel({ transactions, rate }) {
   const { budget, loading, error, generate } = useAIBudget()
@@ -112,8 +113,8 @@ export function BudgetPanel({ transactions, rate }) {
                       )}
                     </div>
                     <div style={{ fontSize: 12, color: '#4A6B5C' }}>
-                      <span style={{ fontWeight: 600, color: barColor }}>${Math.round(spent)}</span>
-                      <span style={{ color: '#7A9E8E' }}> / ${Math.round(limit)}</span>
+                      <span style={{ fontWeight: 600, color: barColor }}>{moneyFormatter.format(spent)}</span>
+                      <span style={{ color: '#7A9E8E' }}> / {moneyFormatter.format(limit)}</span>
                     </div>
                   </div>
                   <div style={{ height: 6, background: '#F0F4F2', borderRadius: 3, overflow: 'hidden' }}>
