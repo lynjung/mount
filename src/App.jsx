@@ -30,7 +30,10 @@ function writeLocalList(key, value) {
 
 export default function App() {
   const rate = useExchangeRate()
-  const [demoMode, setDemoMode] = useState(() => localStorage.getItem(DEMO_MODE_KEY) === 'true')
+  const [demoMode, setDemoMode] = useState(() => {
+    const seeded = !localStorage.getItem('mount_accounts') || !localStorage.getItem('mount_transactions') || !localStorage.getItem('mount_goals')
+    return localStorage.getItem(DEMO_MODE_KEY) === 'true' || seeded
+  })
   const [accounts, setAccounts] = useState(() => {
     seedIfEmpty()
     return readLocalList('mount_accounts', [])
@@ -81,6 +84,7 @@ export default function App() {
     setTransactions(readLocalList('mount_transactions', []))
     setGoals(readLocalList('mount_goals', []))
     setDemoMode(true)
+    localStorage.setItem(DEMO_MODE_KEY, 'true')
   }, [])
 
   if (accounts.length === 0 && !skippedEmpty) {

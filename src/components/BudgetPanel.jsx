@@ -67,7 +67,12 @@ export function BudgetPanel({ transactions, rate }) {
         )}
 
         {error && !loading && (
-          <div style={{ padding: '16px 20px', fontSize: 13, color: '#9B2226', background: '#FFF5F5', borderTop: '1px solid #FFE5E7' }}>
+          <div
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            style={{ padding: '16px 20px', fontSize: 13, color: '#9B2226', background: '#FFF5F5', borderTop: '1px solid #FFE5E7' }}
+          >
             ⚠️ {error}
           </div>
         )}
