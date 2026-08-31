@@ -36,10 +36,8 @@ export interface Goal {
   targetDate: string | null
 }
 
+export type BudgetKey = 'food' | 'transport' | 'shopping' | 'utilities' | 'entertainment'
+
 export interface Budget {
-  food: number
-  transport: number
-  shopping: number
-  utilities: number
-  entertainment: number
+  recommendedLimitCents: Record<BudgetKey, number>
 }

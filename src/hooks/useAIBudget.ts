@@ -2,46 +2,32 @@ import { useState } from 'react'
 import type { Budget, Transaction } from '../types'
 
 const BUDGET_CACHE_KEY = 'mount_ai_budget'
-const BUDGET_CACHE_VERSION = 2
+const BUDGET_CACHE_VERSION = 3
 const BUDGET_KEYS = ['food', 'transport', 'shopping', 'utilities', 'entertainment']
-const MAX_REASONABLE_LIMIT = 100000
+const MAX_REASONABLE_LIMIT_CENTS = 10_000_000
 
-function isValidBudgetValue(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= MAX_REASONABLE_LIMIT
+function isValidCentsValue(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= MAX_REASONABLE_LIMIT_CENTS
 }
 
 function normalizeBudget(raw: unknown): Budget | null {
+  // Frontend expects the server to return `recommendedLimitCents` only.
   if (!raw || typeof raw !== 'object') return null
 
   const candidate = raw as Record<string, unknown>
-  const normalized: Partial<Budget> = {}
+  const centsObject = candidate.recommendedLimitCents
+  if (!centsObject || typeof centsObject !== 'object') return null
+
+  const normalized: Partial<Budget['recommendedLimitCents']> = {}
 
   for (const key of BUDGET_KEYS) {
-    const value = candidate[key]
-    if (typeof value === 'string') {
-      const cleaned = value.replace(/[$,\s]/g, '')
-      const parsed = Number(cleaned)
-      if (!isValidBudgetValue(parsed)) {
-        return null
-      }
-      normalized[key as keyof Budget] = parsed
-      continue
-    }
-
-    if (!isValidBudgetValue(value)) {
-      return null
-    }
-    normalized[key as keyof Budget] = value
+    const value = (centsObject as Record<string, unknown>)[key]
+    if (value === undefined) return null
+    if (!isValidCentsValue(value)) return null
+    normalized[key] = Math.round(Number(value))
   }
 
-  return BUDGET_KEYS.reduce((acc, key) => {
-    const val = normalized[key as keyof Budget]
-    if (val === undefined) {
-      return acc
-    }
-    acc[key as keyof Budget] = Number(val)
-    return acc
-  }, {} as Budget)
+  return { recommendedLimitCents: normalized as Budget['recommendedLimitCents'] }
 }
 
 function loadPersistedBudget(): Budget | null {

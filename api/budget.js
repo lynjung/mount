@@ -1,67 +1,95 @@
 export const MODEL_CANDIDATES = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite']
 export const BUDGET_KEYS = ['food', 'transport', 'shopping', 'utilities', 'entertainment']
 const GEMINI_API_VERSION = 'v1beta'
-const MAX_REASONABLE_LIMIT = 100000
+const MAX_REASONABLE_LIMIT_USD = 100000
+const MAX_REASONABLE_LIMIT_CENTS = MAX_REASONABLE_LIMIT_USD * 100
+const TOTAL_RECOMMENDED_RATIO = 3 // recommended total should be at most this x monthly spending
+const MIN_TOTAL_CAP_USD = 1000 // allow at least this much absolute cap for new users
 
-function toRoundedNumber(value) {
-  return Number(Number(value).toFixed(2))
+function toCents(value) {
+  const cents = Number(value)
+  if (!Number.isFinite(cents) || cents < 0 || cents > MAX_REASONABLE_LIMIT_CENTS) {
+    return null
+  }
+  return Math.round(cents)
 }
 
-export function sanitizeBudgetValue(value) {
+function parseUsdFromCandidate(value) {
+  // Accept numeric USD values directly. For strings, strip dollar sign and commas
+  // then use parseFloat to preserve decimals. Do NOT infer integer strings as cents.
   if (typeof value === 'number') {
-    if (!Number.isFinite(value) || value < 0 || value > MAX_REASONABLE_LIMIT) return null
-    return toRoundedNumber(value)
+    if (!Number.isFinite(value)) return null
+    return Number(Number(value).toFixed(2))
   }
 
-  if (typeof value !== 'string') return null
+  if (typeof value === 'string') {
+    const cleaned = value.replace(/[$,\s]/g, '')
+    if (!cleaned.length) return null
+    const parsed = Number.parseFloat(cleaned)
+    if (!Number.isFinite(parsed)) return null
+    return Number(parsed.toFixed(2))
+  }
 
-  const trimmed = value.trim()
-  if (!trimmed) return null
-
-  const cleaned = trimmed
-    .replace(/[$€£¥]/g, '')
-    .replace(/,/g, '')
-    .replace(/\s+/g, '')
-
-  if (!/^-?(?:\d+|\d*\.\d+)$/.test(cleaned)) return null
-
-  const parsed = Number(cleaned)
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_REASONABLE_LIMIT) return null
-
-  return toRoundedNumber(parsed)
+  return null
 }
 
-export function buildDeterministicFallback(summary = {}) {
-  return BUDGET_KEYS.reduce((acc, key) => {
-    const spent = Number(summary[key]) || 0
-    acc[key] = toRoundedNumber(Math.max(0, Math.min(spent, MAX_REASONABLE_LIMIT)))
-    return acc
-  }, {})
+export function defaultBudgetFallback(summary = {}) {
+  return {
+    recommendedLimitCents: BUDGET_KEYS.reduce((acc, key) => {
+      const spent = Number(summary[key]) || 0
+      acc[key] = Math.max(0, Math.min(Math.round(spent * 100), MAX_REASONABLE_LIMIT_CENTS))
+      return acc
+    }, {}),
+  }
 }
 
-export function normalizeBudgetObject(rawBudget, summary = {}) {
-  const fallback = buildDeterministicFallback(summary)
+export function normalizeBudgetResponse(rawBudget, summary = {}) {
+  const fallback = defaultBudgetFallback(summary)
   if (!rawBudget || typeof rawBudget !== 'object') {
     return fallback
   }
 
-  const monthlyTotal = Object.values(summary).reduce((sum, value) => sum + (Number(value) || 0), 0)
-  const incomeEstimate = Math.max(1000, monthlyTotal * 1.5)
+  const centsSource = rawBudget.recommendedLimitCents
+  const usdSource = rawBudget.recommendedLimitUsd
+  const source = centsSource && typeof centsSource === 'object'
+    ? { kind: 'cents', data: centsSource }
+    : usdSource && typeof usdSource === 'object'
+      ? { kind: 'usd', data: usdSource }
+      : null
 
-  return BUDGET_KEYS.reduce((acc, key) => {
-    const rawValue = rawBudget[key]
-    const sanitized = sanitizeBudgetValue(rawValue)
-    const spent = Number(summary[key]) || 0
-    const maxAllowed = Math.min(
-      MAX_REASONABLE_LIMIT,
-      Math.max(500, spent * 5, Math.max(0, incomeEstimate * 0.75) / BUDGET_KEYS.length)
-    )
+  if (!source || typeof source.data !== 'object') {
+    return fallback
+  }
 
-    const isValid = sanitized !== null && Number.isFinite(sanitized) && sanitized >= 0 && sanitized <= maxAllowed
+  const normalized = {}
+  const usdValues = {}
 
-    acc[key] = isValid ? toRoundedNumber(sanitized) : fallback[key]
-    return acc
-  }, {})
+  for (const key of BUDGET_KEYS) {
+    const rawValue = source.data[key]
+    if (rawValue === undefined) return fallback
+
+    if (source.kind === 'cents') {
+      const cents = toCents(rawValue)
+      if (cents === null) return fallback
+      normalized[key] = cents
+      usdValues[key] = Number((cents / 100).toFixed(2))
+    } else {
+      const usd = parseUsdFromCandidate(rawValue)
+      if (usd === null || usd < 0 || usd > MAX_REASONABLE_LIMIT_USD) return fallback
+      normalized[key] = Math.round(usd * 100)
+      usdValues[key] = usd
+    }
+  }
+
+  // Validate totals relative to provided monthly summary (income/spending estimate)
+  const totalRecommendedUsd = Object.values(usdValues).reduce((s, v) => s + v, 0)
+  const totalSummaryUsd = Object.values(summary).reduce((s, v) => s + Number(v || 0), 0)
+  const allowedTotal = Math.max(MIN_TOTAL_CAP_USD, totalSummaryUsd * TOTAL_RECOMMENDED_RATIO)
+  if (totalRecommendedUsd > allowedTotal) {
+    return fallback
+  }
+
+  return { recommendedLimitCents: normalized }
 }
 
 export default async function handler(req, res) {
@@ -97,7 +125,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'AI budget generation is not configured on the server.' })
   }
 
-  const prompt = `You are helping plan a monthly household budget. Use only the following category totals in USD, already normalized to monthly spend amounts: ${JSON.stringify(normalizedSummary)}. Return ONLY valid JSON with five keys: food, transport, shopping, utilities, entertainment. Each value is a suggested monthly budget limit in USD rounded to a whole number. Do not include markdown, commentary, or extra keys.`
+  const prompt = `You are helping plan a monthly household budget. Use only the following category totals in USD, already normalized to monthly spend amounts: ${JSON.stringify(normalizedSummary)}. Return ONLY valid JSON with five keys: food, transport, shopping, utilities, entertainment. Each value is a suggested monthly budget limit in USD rounded to a whole number. Return the result as {"recommendedLimitUsd": { ... }}. Do not include markdown, commentary, or extra keys.`
 
   let lastError = null
 
@@ -126,10 +154,10 @@ export default async function handler(req, res) {
           const match = clean.match(/\{[\s\S]*\}/)
           const candidate = match ? match[0] : clean
           const parsed = JSON.parse(candidate)
-          const budget = normalizeBudgetObject(parsed, normalizedSummary)
+          const budget = normalizeBudgetResponse(parsed, normalizedSummary)
           return res.status(200).json(budget)
         } catch {
-          return res.status(200).json(buildDeterministicFallback(normalizedSummary))
+          return res.status(200).json(defaultBudgetFallback(normalizedSummary))
         }
       }
 

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useAIBudget } from '../hooks/useAIBudget'
 import { toUSD } from '../utils/currency'
 import { CATEGORIES } from '../utils/categories'
+import { centsToUsd, formatUsdFromCents, getBudgetProgressPercent } from '../utils/budget'
 
 const BUDGET_CATS = ['food', 'transport', 'shopping', 'utilities', 'entertainment']
 const moneyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
@@ -81,10 +82,10 @@ export function BudgetPanel({ transactions, rate }) {
         {budget && !loading && (
           <div style={{ padding: '12px 0' }}>
             {BUDGET_CATS.map(cat => {
-              const limit = budget[cat] || 0
+              const limitCents = budget.recommendedLimitCents[cat] || 0
               const spent = spentByCategory[cat] || 0
-              const pct = limit > 0 ? Math.min((spent / limit) * 100, 120) : 0
-              const displayPct = limit > 0 ? (spent / limit) * 100 : 0
+              const displayPct = getBudgetProgressPercent(spent, limitCents)
+              const pct = Math.min(displayPct, 120)
 
               const barColor = displayPct >= 100 ? '#E63946' : displayPct >= 75 ? '#D4A017' : '#1A3D30'
               const warning = displayPct >= 100
@@ -114,7 +115,7 @@ export function BudgetPanel({ transactions, rate }) {
                     </div>
                     <div style={{ fontSize: 12, color: '#4A6B5C' }}>
                       <span style={{ fontWeight: 600, color: barColor }}>{moneyFormatter.format(spent)}</span>
-                      <span style={{ color: '#7A9E8E' }}> / {moneyFormatter.format(limit)}</span>
+                      <span style={{ color: '#7A9E8E' }}> / {formatUsdFromCents(limitCents)}</span>
                     </div>
                   </div>
                   <div style={{ height: 6, background: '#F0F4F2', borderRadius: 3, overflow: 'hidden' }}>
